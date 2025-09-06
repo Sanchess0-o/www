@@ -2,6 +2,10 @@ import telebot # библиотека telebot
 from config import token # импорт токена
 
 bot = telebot.TeleBot(token) 
+@bot.message_handler(content_types=['new_chat_members'])
+def make_some(message):
+    bot.send_message(message.chat.id, 'Я принял нового пользователя')
+    bot.approve_chat_join_request(message.chat.id, message.from_user.id)
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -22,5 +26,20 @@ def ban_user(message):
             bot.reply_to(message, f"Пользователь @{message.reply_to_message.from_user.username} был забанен.")
     else:
         bot.reply_to(message, "Эта команда должна быть использована в ответ на сообщение пользователя, которого вы хотите забанить.")
+
+@bot.message_handler(content_types=['text'])
+def handle_text_messages(message):
+    if message.text and "https://" or "http://" or "www." or ".com" or ".ru" or ".org" in message.text:
+        chat_id = message.chat.id
+        user_id = message.from_user.id
+        user_status = bot.get_chat_member(chat_id, user_id).status
+        
+        if user_status not in ['administrator', 'creator']:
+            try:
+                bot.ban_chat_member(chat_id, user_id)
+                bot.reply_to(message, f"Пользователь @{message.from_user.username} забанен за отправку ссылки.")
+            except Exception as e:
+                bot.reply_to(message, f"Ошибка при бане пользователя: {e}")
+
 
 bot.infinity_polling(none_stop=True)
